@@ -1,27 +1,33 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Feb 10 10:18:06 2017
-
-@author: Administrator
+    MLcode1对应的训练特征
+@author: yangydeng
 """
 
 import pandas as pd
 import sys
 from sklearn.preprocessing import PolynomialFeatures
 sys.path.append('../tools')
-from tools import *
+from tools import every_shop_open_ratio,transfrom_Arr_DF,make_OHE,week_poly_2
 
-day_time = '_02_16_3'
+day_time = '_03_07_2'
+add_weekends = pd.read_csv('../csv/add_weekends.csv')
+add_Aug = pd.read_csv('../csv/add_Aug.csv')
+add_2016 = pd.read_csv('../csv/add_2016.csv')
+add_July_Aug = pd.read_csv('../csv/add_July_Aug.csv')
+analysis_all_week = pd.read_csv('../csv/analysis_all_week.csv')
+point_feature = pd.read_csv('../csv/point_feature.csv')
 
-weekA = pd.read_csv('../csv/weekABCD/weekA.csv'); weekA.index=weekA.shop_id
-weekB = pd.read_csv('../csv/weekABCD/weekB.csv'); weekB.index=weekB.shop_id
-weekC = pd.read_csv('../csv/weekABCD/weekC.csv'); weekC.index=weekC.shop_id
-weekD = pd.read_csv('../csv/weekABCD/weekD.csv'); weekD.index=weekD.shop_id
+weekA = pd.read_csv('../csv/weekABCD/weekA.csv')
+weekB = pd.read_csv('../csv/weekABCD/weekB.csv')
+weekC = pd.read_csv('../csv/weekABCD/weekC.csv')
+weekD = pd.read_csv('../csv/weekABCD/weekD.csv')
 
-weekA_view = pd.read_csv('../csv/weekABCD/weekA_view.csv'); weekA_view.index = weekA_view.shop_id
-weekB_view = pd.read_csv('../csv/weekABCD/weekB_view.csv'); weekB_view.index = weekB_view.shop_id
-weekC_view = pd.read_csv('../csv/weekABCD/weekC_view.csv'); weekC_view.index = weekC_view.shop_id
-weekD_view = pd.read_csv('../csv/weekABCD/weekD_view.csv'); weekD_view.index = weekD_view.shop_id
+weekA_view = pd.read_csv('../csv/weekABCD/weekA_view.csv')
+weekB_view = pd.read_csv('../csv/weekABCD/weekB_view.csv')
+weekC_view = pd.read_csv('../csv/weekABCD/weekC_view.csv')
+weekD_view = pd.read_csv('../csv/weekABCD/weekD_view.csv')
 
 shop_info_num = pd.read_csv('../csv/shop_info_num.csv')
 
@@ -44,6 +50,7 @@ train_min = train_x.min(axis=1)
 train_median = train_x.median(axis=1)
 train_mad = train_x.mad(axis=1)
 train_var = train_x.var(axis=1) 
+
 
 #   make城市的OHE码
 names = []          
@@ -88,7 +95,6 @@ OHE_score = transfrom_Arr_DF(make_OHE(shop_info_num.score),'shop_info_score_')
 OHE_shop_level = transfrom_Arr_DF(make_OHE(shop_info_num.shop_level),'shop_info_level_')
 
 train_x = transfrom_Arr_DF(poly.fit_transform(train_x)) #将其中的日期生成多项式
-#poly_weekB = transfrom_Arr_DF(poly.fit_transform(weekB.drop('shop_id',axis=1)),'weekB_')
 train_x['sumABCD'] = train_sum    #加入总数
 train_x['meanABCD'] = train_mean     #加入平均数
 train_x['ratio_wk'] = train_ratio_wk  #周末占总量的比例
@@ -101,13 +107,18 @@ train_x = train_x.join(OHE_cate_3,how='left')
 #train_x = train_x.join(OHE_score,how='left')
 train_x = train_x.join(OHE_shop_level,how='left')
 train_x = train_x.join(train_x_view)
-#train_x = train_x.join(poly_weekB)
 train_x['std'] = train_std
 train_x['max'] = train_max
 train_x['min'] = train_min
 train_x['median'] = train_median
 train_x['mad'] = train_mad
 train_x['var'] = train_var
+
+train_x = train_x.join(week_poly_2(weekA,'poly2A'),how='left')
+train_x = train_x.join(week_poly_2(weekB,'poly2B'),how='left')
+train_x = train_x.join(add_July_Aug,how='left')
+train_x = train_x.join(analysis_all_week,how='left')
+train_x = train_x.join(point_feature.ix[:,'2016-10-18':'2016-10-24'],how='left')
 
 train_y = weekC.drop('shop_id',axis=1)
 
@@ -150,7 +161,14 @@ test_x['median'] = test_median
 test_x['mad'] = test_mad
 test_x['var'] = test_var
 
+test_x = test_x.join(week_poly_2(weekB,'poly2B'),how='left')
+test_x = test_x.join(week_poly_2(weekC,'poly2C'),how='left')
+test_x = test_x.join(add_July_Aug,how='left')
+test_x = test_x.join(analysis_all_week,how='left')
+test_x = test_x.join(point_feature.ix[:,'2016-10-25':'2016-10-31'])
+
 test_y = weekD.drop('shop_id',axis=1)
 
 test_x.to_csv('../test_1/test_x'+day_time+'.csv',index=False)
 test_y.to_csv('../test_1/test_y'+day_time+'.csv',index=False)
+
